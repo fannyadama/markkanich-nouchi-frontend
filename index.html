@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dictionnaire Markkanich Nouchi - Argot Ivoirien</title>
+    <meta name="description" content="Le dictionnaire complet du Nouchi, l'argot ivoirien. Plus de 260 mots, définitions, exemples et prononciations.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border-radius: 12px; }
+        h1 { font-size: 2em; margin-bottom: 10px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+        input:focus { outline: none; border-color: #ff6b35; }
+        button { padding: 12px 20px; background: #ff6b35; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #e55a2b; }
+        .mot-card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 5px solid #ff6b35; }
+        .mot-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .mot-header h3 { color: #2c3e50; }
+        .prononciation { color: #888; font-style: italic; margin-bottom: 8px; }
+        .categorie { background: #fff3e0; color: #ff6b35; padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+        .exemple { background: #f8f9fa; padding: 10px; border-radius: 6px; font-style: italic; color: #555; margin-top: 10px; border-left: 3px solid #ff6b35; }
+        .loading { text-align: center; color: #666; margin-top: 20px; padding: 20px; }
+        #stats { text-align: center; margin-bottom: 20px; color: #666; font-weight: bold; background: white; padding: 15px; border-radius: 8px; }
+        footer { text-align: center; margin-top: 40px; padding: 20px; color: #666; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🇨🇮 Markkanich Nouchi</h1>
+        <p>Le dictionnaire de l'argot ivoirien</p>
+    </header>
+
+    <div id="stats">Chargement des données...</div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Rechercher un mot (ex: goumin, enjailler...)">
+        <button onclick="chercher()">🔍 Rechercher</button>
+    </div>
+
+    <div id="results"></div>
+
+    <footer>
+        <p>© 2026 Mark Kanich | Dictionnaire Nouchi en ligne</p>
+    </footer>
+
+    <script>
+        const API_URL = "https://markkanich-nouchi-api.onrender.com"; 
+        
+        async function init() {
+            try {
+                const stats = await fetch(API_URL + "/stats").then(r => r.json());
+                document.getElementById("stats").innerText = `📚 ${stats.total_mots} mots répertoriés | 🏷️ ${stats.total_categories} catégories`;
+                chargerMots();
+            } catch (e) {
+                document.getElementById("stats").innerText = "⚠️ Connexion à l'API en cours...";
+            }
+        }
+
+        async function chargerMots(q = "") {
+            document.getElementById("results").innerHTML = '<div class="loading">Chargement des mots...</div>';
+            const url = q ? `${API_URL}/mots?q=${q}` : `${API_URL}/mots?limite=50`;
+            
+            try {
+                const res = await fetch(url);
+                const mots = await res.json();
+                
+                if (mots.length === 0) {
+                    document.getElementById("results").innerHTML = '<div class="loading">Aucun mot trouvé.</div>';
+                    return;
+                }
+
+                document.getElementById("results").innerHTML = mots.map(m => `
+                    <div class="mot-card">
+                        <div class="mot-header">
+                            <h3>${m.mot}</h3>
+                            <span class="categorie">${m.categorie || 'Général'}</span>
+                        </div>
+                        <div class="prononciation">${m.prononciation || ''}</div>
+                        <p><strong>Définition :</strong> ${m.definition}</p>
+                        ${m.exemple ? `<div class="exemple">« ${m.exemple} »</div>` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById("results").innerHTML = '<div class="loading">Erreur de chargement. Vérifie ta connexion.</div>';
+            }
+        }
+
+        function chercher() {
+            const q = document.getElementById("searchInput").value;
+            chargerMots(q);
+        }
+
+        document.getElementById("searchInput").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") chercher();
+        });
+
+        init();
+    </script>
+</body>
+</html>
