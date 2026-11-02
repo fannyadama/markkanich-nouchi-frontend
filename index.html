@@ -258,15 +258,23 @@
             document.getElementById("planBadge").innerHTML = `<span class="plan-badge ${planClass}">${planLabel}</span>`;
         }
 
+        // ==========================================
+        // FONCTION DE PAIEMENT CORRIGÉE (100% Compatible Paystack)
+        // ==========================================
         async function initierPaiement(plan) {
             const email = localStorage.getItem("email");
-            if (!email) { ouvrirModalConnexion(); alert("Connectez-vous d'abord pour payer"); return; }
+            if (!email) { 
+                ouvrirModalConnexion(); 
+                alert("Connectez-vous d'abord pour payer"); 
+                return; 
+            }
             try {
                 const res = await fetch(API_URL + "/initier-paiement", {
-                    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({email: email, plan: plan})
+                    method: "POST", 
+                    headers: {"Content-Type": "application/json"}, 
+                    body: JSON.stringify({email: email, plan: plan})
                 });
                 
-                // NOUVEAU : Cette ligne attrape l'erreur exacte du serveur (404, 500, etc.)
                 if (!res.ok) {
                     const errorText = await res.text();
                     throw new Error(`Erreur serveur (${res.status}): ${errorText}`);
@@ -281,18 +289,30 @@
                         currency: 'XOF',
                         ref: data.reference,
                         metadata: {plan: plan},
-                        callback: async function(response) {
-                            const verif = await fetch(API_URL + "/verifier-paiement", {
-                                method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({reference: response.reference})
+                        // CORRECTION ICI : Fonction classique (pas async) avec .then() pour Paystack
+                        callback: function(response) {
+                            fetch(API_URL + "/verifier-paiement", {
+                                method: "POST", 
+                                headers: {"Content-Type": "application/json"}, 
+                                body: JSON.stringify({reference: response.reference})
+                            }).then(function(verifRes) {
+                                return verifRes.json();
+                            }).then(function(resultat) {
+                                if (resultat.status === "success") {
+                                    alert("🎉 Paiement réussi ! Abonnement activé pour 30 jours.");
+                                    verifierUtilisateur(email);
+                                    chargerMotsComplets();
+                                } else {
+                                    alert("⚠️ Échec de la vérification du paiement.");
+                                }
+                            }).catch(function(err) {
+                                console.error(err);
+                                alert("❌ Erreur de connexion lors de la vérification.");
                             });
-                            const resultat = await verif.json();
-                            if (resultat.status === "success") {
-                                alert("🎉 Paiement réussi ! Abonnement activé pour 30 jours.");
-                                verifierUtilisateur(email);
-                                chargerMotsComplets();
-                            }
                         },
-                        onClose: function() { alert('Paiement annulé'); }
+                        onClose: function() { 
+                            alert('Paiement annulé'); 
+                        }
                     });
                     handler.openIframe();
                 } else {
