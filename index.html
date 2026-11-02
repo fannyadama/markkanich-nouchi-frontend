@@ -265,6 +265,13 @@
                 const res = await fetch(API_URL + "/initier-paiement", {
                     method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({email: email, plan: plan})
                 });
+                
+                // NOUVEAU : Cette ligne attrape l'erreur exacte du serveur (404, 500, etc.)
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`Erreur serveur (${res.status}): ${errorText}`);
+                }
+
                 const data = await res.json();
                 if (data.status === "success") {
                     const handler = PaystackPop.setup({
@@ -288,8 +295,13 @@
                         onClose: function() { alert('Paiement annulé'); }
                     });
                     handler.openIframe();
+                } else {
+                    throw new Error(data.detail || "Le serveur a rejeté la demande.");
                 }
-            } catch(e) { alert("Erreur lors de l'initialisation du paiement"); }
+            } catch(e) { 
+                console.error("ERREUR DÉTAILLÉE:", e); 
+                alert("ERREUR DÉTAILLÉE : " + e.message); 
+            }
         }
 
         async function verifierUtilisateur(email) {
